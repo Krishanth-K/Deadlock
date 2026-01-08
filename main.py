@@ -464,10 +464,25 @@ async def text_to_speech(request: TTSRequest):
         if response.status_code == 200:
             return Response(content=response.content, media_type="audio/mpeg")
         else:
-            print(f"ElevenLabs Error: {response.status_code} - {response.text}")
+            # Parse error for better logging
+            error_msg = response.text
+            try:
+                error_data = response.json()
+                if "detail" in error_data and "status" in error_data["detail"]:
+                    status = error_data["detail"]["status"]
+                    if status == "detected_unusual_activity":
+                        print(f"ElevenLabs Warning: Free Tier limit/abuse detected on this IP. Falling back to standard voice.")
+                        raise HTTPException(status_code=503, detail="Premium voice unavailable (IP blocked by provider)")
+            except:
+                pass
+                
+            print(f"ElevenLabs API Error: {response.status_code} - {error_msg}")
             raise HTTPException(status_code=response.status_code, detail="ElevenLabs API Error")
+
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"TTS Error: {e}")
+        print(f"TTS Internal Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
