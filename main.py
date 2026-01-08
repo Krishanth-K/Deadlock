@@ -22,6 +22,8 @@ from fastapi.responses import Response, FileResponse
 
 import edge_tts
 import tempfile
+import os
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
