@@ -53,6 +53,7 @@ class RouteRequest(BaseModel):
     dest_lat: Optional[float] = None
     dest_lng: Optional[float] = None
     traffic_condition: Optional[str] = "normal" # Allow string for flexibility
+    fuel_efficiency: Optional[float] = 8.0 # L/100km (Default: Sedan)
 
 class RouteMetrics(BaseModel):
     fuel_liters: float
@@ -83,7 +84,7 @@ class AlternativeRoute(BaseModel):
 
 # --- Helper Logic ---
 
-async def process_route_data(r_data, origin, destination, origin_lat, origin_lng, dest_lat, dest_lng):
+async def process_route_data(r_data, origin, destination, origin_lat, origin_lng, dest_lat, dest_lng, fuel_efficiency=8.0):
     """
     Helper to process raw OSRM route data into enriched RouteMetrics using core.py services.
     """
@@ -105,7 +106,7 @@ async def process_route_data(r_data, origin, destination, origin_lat, origin_lng
     traffic_enum = TrafficService.get_traffic(mid_point[1], mid_point[0], r_data.get("duration", 0), distance_km)
 
     # 3. Calculate Costs
-    core_metrics = CostModel.calculate(distance_km, duration_min, ascent, traffic_enum, weather)
+    core_metrics = CostModel.calculate(distance_km, duration_min, ascent, traffic_enum, weather, fuel_efficiency)
     
     # 4. Map to API Model
     metrics = RouteMetrics(
@@ -186,7 +187,8 @@ async def calculate_route(request: RouteRequest):
             routes_data[0], 
             request.origin, request.destination,
             request.origin_lat, request.origin_lng, 
-            request.dest_lat, request.dest_lng
+            request.dest_lat, request.dest_lng,
+            request.fuel_efficiency
         )
         
         tips = [
@@ -328,7 +330,8 @@ async def get_alternative_routes(request: RouteRequest):
             processed = await process_route_data(
                 r_data, request.origin, request.destination,
                 request.origin_lat, request.origin_lng,
-                request.dest_lat, request.dest_lng
+                request.dest_lat, request.dest_lng,
+                request.fuel_efficiency
             )
             processed_candidates.append(processed)
 

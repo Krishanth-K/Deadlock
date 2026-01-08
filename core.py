@@ -247,10 +247,14 @@ class CostModel:
                   duration_min: float,
                   ascent_m: float, 
                   traffic: TrafficCondition,
-                  weather: Optional[WeatherData] = None) -> RouteMetrics:
+                  weather: Optional[WeatherData] = None,
+                  fuel_efficiency: float = 8.0) -> RouteMetrics:
+        
+        # Convert L/100km to L/km
+        base_fuel_per_km = fuel_efficiency / 100.0
         
         # 1. Distance Cost
-        dist_cost = distance_km * cls.BASE_FUEL_PER_KM
+        dist_cost = distance_km * base_fuel_per_km
         
         # 2. Elevation Penalty
         elev_cost = (ascent_m / 100.0) * 0.15
