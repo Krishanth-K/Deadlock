@@ -20,10 +20,19 @@ from core import (
 )
 from fastapi.responses import Response
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 app = FastAPI(title="EcoRoute Optimizer API")
 
 # Configuration
-ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_API_KEY_HERE"  # Replace with actual key
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+if not ELEVENLABS_API_KEY:
+    print("WARNING: ELEVENLABS_API_KEY not found in .env file. Voice features will be disabled.")
+
 ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM" # "Rachel" voice (Standard default)
 
 # CORS middleware
@@ -428,7 +437,7 @@ async def text_to_speech(request: TTSRequest):
     """
     Convert text to speech using ElevenLabs API
     """
-    if "YOUR_ELEVENLABS_API_KEY" in ELEVENLABS_API_KEY:
+    if not ELEVENLABS_API_KEY or "YOUR_ELEVENLABS_API_KEY" in ELEVENLABS_API_KEY:
          raise HTTPException(status_code=500, detail="API Key not configured")
 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
