@@ -18,7 +18,7 @@ from core import (
     TrafficCondition, 
     WeatherData
 )
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
 
 import os
 from dotenv import load_dotenv
@@ -145,6 +145,10 @@ def process_route_data(r_data, origin, destination, origin_lat, origin_lng, dest
 
 @app.get("/")
 async def root():
+    return FileResponse("frontend.html")
+
+@app.get("/health")
+async def health_check():
     return {
         "message": "EcoRoute Optimizer API",
         "version": "2.0 (Core Integration)",

@@ -1,14 +1,11 @@
 {
-  "builds": [
-    {
-      "src": "main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "main.py"
-    }
+  "rewrites": [
+    { "source": "/calculate-route", "destination": "/main.py" },
+    { "source": "/alternative-routes", "destination": "/main.py" },
+    { "source": "/recalculate", "destination": "/main.py" },
+    { "source": "/tts", "destination": "/main.py" },
+    { "source": "/docs", "destination": "/main.py" },
+    { "source": "/openapi.json", "destination": "/main.py" },
+    { "source": "/", "destination": "/frontend.html" }
   ]
 }
