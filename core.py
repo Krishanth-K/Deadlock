@@ -41,6 +41,26 @@ class RouteExplanation(BaseModel):
     confidence: str
 
 # Services
+class GeocodingService:
+    """Resolve addresses to coordinates"""
+    
+    @staticmethod
+    async def get_coordinates(query: str) -> Optional[Tuple[float, float]]:
+        if not query: return None
+        try:
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {"q": query, "format": "json", "limit": 1}
+            headers = {"User-Agent": "EcoRouteOptimizer/1.0"}
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, headers=headers, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    return float(data[0]["lat"]), float(data[0]["lon"])
+        except Exception:
+            pass
+        return None
+
 class WeatherService:
     """Fetch weather data along route with robust fallbacks"""
     

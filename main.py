@@ -16,7 +16,8 @@ from core import (
     TrafficService, 
     CostModel, 
     TrafficCondition, 
-    WeatherData
+    WeatherData,
+    GeocodingService
 )
 from fastapi.responses import Response, FileResponse
 
@@ -156,6 +157,17 @@ async def health_check():
 @app.post("/calculate-route", response_model=RouteResponse)
 async def calculate_route(request: RouteRequest):
     """Calculate single optimal route"""
+    # 1. Geocoding Fallback
+    if not request.origin_lat or not request.origin_lng:
+        coords = await GeocodingService.get_coordinates(request.origin)
+        if coords:
+            request.origin_lat, request.origin_lng = coords
+            
+    if not request.dest_lat or not request.dest_lng:
+        coords = await GeocodingService.get_coordinates(request.destination)
+        if coords:
+            request.dest_lat, request.dest_lng = coords
+
     if not (request.origin_lat and request.origin_lng and request.dest_lat and request.dest_lng):
         # Friendly error message for address resolution failures
         raise HTTPException(
@@ -253,6 +265,17 @@ def get_deviation_point(olat, olng, dlat, dlng, offset_scale=0.05) -> Tuple[floa
 @app.post("/alternative-routes")
 async def get_alternative_routes(request: RouteRequest):
     """Get 3 PHYSICALLY DISTINCT routes: Efficient, Fastest, Balanced"""
+    # 1. Geocoding Fallback
+    if not request.origin_lat or not request.origin_lng:
+        coords = await GeocodingService.get_coordinates(request.origin)
+        if coords:
+            request.origin_lat, request.origin_lng = coords
+            
+    if not request.dest_lat or not request.dest_lng:
+        coords = await GeocodingService.get_coordinates(request.destination)
+        if coords:
+            request.dest_lat, request.dest_lng = coords
+
     if not (request.origin_lat and request.origin_lng and request.dest_lat and request.dest_lng):
         raise HTTPException(
             status_code=400, 
