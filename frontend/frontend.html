@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoRoute Optimizer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      color: #2e7d32;
+      font-size: 2em;
+    }
+
+    .header p {
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .voice-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .voice-status {
+      font-size: 0.8em;
+      padding: 5px 10px;
+      border-radius: 12px;
+      background: #f5f5f5;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+
+    .status-dot.premium {
+      background: #4caf50;
+      box-shadow: 0 0 5px #4caf50;
+    }
+
+    .status-dot.standard {
+      background: #ff9800;
+    }
+
+    .status-dot.error {
+      background: #f44336;
+    }
+
+    .voice-toggle {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    .voice-toggle:hover {
+      background: #45a049;
+    }
+
+    .voice-toggle.disabled {
+      background: #9e9e9e;
+    }
+
+    .alert {
+      background: #2196f3;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      animation: slideIn 0.3s;
+    }
+
+    .alert.show {
+      display: block;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    .input-panel {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-panel h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.4em;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border 0.3s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #4caf50;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 10px;
+    }
+
+    .btn-primary {
+      background: #4caf50;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+    }
+
+    .btn-primary:disabled {
+      background: #bdbdbd;
+      cursor: not-allowed;
+    }
+
+    .traffic-status {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .traffic-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .traffic-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .traffic-dot.normal {
+      background: #4caf50;
+    }
+
+    .traffic-dot.moderate {
+      background: #ff9800;
+    }
+
+    .traffic-dot.heavy {
+      background: #f44336;
+    }
+
+    .map-panel {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .map-display {
+      width: 100%;
+      height: 500px;
+      border-radius: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .metric-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-card h3 {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .metric-card .value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .metric-card .unit {
+      color: #999;
+      font-size: 0.9em;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4caf50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Autocomplete Styles */
+    .suggestions-list {
+      position: absolute;
+      background: white;
+      width: 100%;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 0 0 8px 8px;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .suggestion-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    /* Route calculation overlay */
+    .route-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      display: none;
+      text-align: center;
+    }
+
+    .route-overlay.show {
+      display: block;
+    }
+
+    .route-overlay .loading {
+      margin: 0 auto 10px;
+    }
+
+    /* Alternative routes panel */
+    .alternatives-panel {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .alternatives-panel.show {
+      display: block;
+    }
+
+    .route-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .route-card:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .route-card.selected {
+      border-color: #4caf50;
+      background: #f1f8f4;
+    }
+
+    .route-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .route-card-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .route-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .route-badge.fastest {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .route-badge.balanced {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .route-badge.eco-friendly {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    .route-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .route-stat {
+      text-align: center;
+    }
+
+    .route-stat-value {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .route-stat-label {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .route-conditions {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .weather-widget {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .weather-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .weather-icon {
+      font-size: 2em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>🌿 EcoRoute Optimizer</h1>
+        <p>Real-time fuel efficiency & carbon reduction</p>
+      </div>
+      <div class="voice-controls">
+        <div class="voice-status" id="voiceStatus" title="Using Browser Voice">
+          <div class="status-dot standard" id="voiceStatusDot"></div>
+          <span id="voiceStatusText">Standard Voice</span>
+        </div>
+        <button class="voice-toggle" id="voiceToggle" onclick="toggleVoice()">
+          🔊 Voice ON
+        </button>
+      </div>
+    </div>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="main-content">
+      <div class="input-panel">
+        <h2>📍 Route Planning</h2>
+
+        <div class="input-group" style="position: relative;">
+          <label>Origin</label>
+          <input type="text" id="origin" placeholder="Enter starting location" autocomplete="off" />
+          <div id="originSuggestions" class="suggestions-list"></div>
+        </div>
+
+        <div class="input-group" style="position: relative;">
+          <label>Destination</label>
+          <input type="text" id="destination" placeholder="Enter destination" autocomplete="off" />
+          <div id="destinationSuggestions" class="suggestions-list"></div>
+        </div>
+
+        <button class="btn btn-primary" id="calculateBtn" onclick="calculateRoute()">
+          Find Optimal Route
+        </button>
+
+        <div class="traffic-status" id="trafficStatus" style="display: none">
+          <h3 style="font-size: 0.9em; color: #666; margin-bottom: 10px">
+            TRAFFIC STATUS
+          </h3>
+          <div class="traffic-indicator">
+            <div class="traffic-dot normal" id="trafficDot"></div>
+            <span id="trafficText">Normal Traffic</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="map-panel">
+          <h2 style="margin-bottom: 20px">🗺️ Live Route Map</h2>
+          <div class="map-display" id="mapDisplay">
+            <div class="route-overlay" id="routeOverlay">
+              <div class="loading"></div>
+              <p style="margin: 0; color: #333; font-weight: 500;">Calculating optimal route...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics-grid" id="metricsGrid" style="display: none"></div>
+
+        <div class="alternatives-panel" id="alternativesPanel">
+          <h2 style="margin-bottom: 15px">🔀 Alternative Routes</h2>
+          <div id="weatherWidget" class="weather-widget" style="display: none"></div>
+          <div id="routeCards"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://localhost:8000";
+    let voiceEnabled = true;
+    let alternativeRoutes = [];
+    let allRouteLayers = [];
+    let trafficCondition = "normal";
+    let map = null;
+    let originMarker = null;
+    let destMarker = null;
+
+    let selectedOrigin = null;
+    let selectedDestination = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      map = L.map('mapDisplay').setView([20.5937, 78.9629], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      setupAutocomplete('origin', 'originSuggestions', (item) => {
+        selectedOrigin = item;
+      });
+
+      setupAutocomplete('destination', 'destinationSuggestions', (item) => {
+        selectedDestination = item;
+      });
+    });
+
+    function setupAutocomplete(inputId, suggestionsId, onSelect) {
+      const input = document.getElementById(inputId);
+      const suggestions = document.getElementById(suggestionsId);
+      let debounceTimer;
+
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value;
+
+        if (query.length < 3) {
+          suggestions.style.display = 'none';
+          return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+
+            suggestions.innerHTML = '';
+            if (data.length > 0) {
+              suggestions.style.display = 'block';
+              data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = item.display_name;
+                div.onclick = () => {
+                  input.value = item.display_name;
+                  suggestions.style.display = 'none';
+                  onSelect({
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon),
+                    display_name: item.display_name
+                  });
+                };
+                suggestions.appendChild(div);
+              });
+            } else {
+              suggestions.style.display = 'none';
+            }
+          } catch (error) {
+            console.error('Error fetching suggestions:', error);
+          }
+        }, 300);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target !== input && e.target !== suggestions) {
+          suggestions.style.display = 'none';
+        }
+      });
+    }
+
+    let currentAudio = null;
+
+    async function speak(text) {
+      if (!voiceEnabled) return;
+
+      // 1. "Shut Up" logic: Stop previous audio immediately
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
+      const statusDot = document.getElementById("voiceStatusDot");
+      const statusText = document.getElementById("voiceStatusText");
+      const statusContainer = document.getElementById("voiceStatus");
+
+      let usePremium = false;
+
+      // Try ElevenLabs TTS first
+      try {
+        statusText.textContent = "Fetching Premium...";
+        const response = await fetch(`${API_URL}/tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          const audio = new Audio(audioUrl);
+          currentAudio = audio; // Store reference
+          audio.play();
+
+          // Update UI to success
+          statusDot.className = "status-dot premium";
+          statusText.textContent = "Premium Voice";
+          statusContainer.title = "Using ElevenLabs AI Voice";
+          usePremium = true;
+          return;
+        } else {
+          // If backend returns error (like 500 for missing key), log it
+          const errData = await response.json();
+          console.warn("TTS Backend Error:", errData);
+
+          statusDot.className = "status-dot error";
+          statusText.textContent = "Standard (Fallback)";
+          statusContainer.title = "Backend Error: " + (errData.detail || "Unknown");
+
+          // Show a one-time alert for this session if it's the first failure
+          if (!window.hasShownVoiceAlert) {
+            showAlert("⚠️ Premium Voice Failed: " + (errData.detail || "Check API Key"));
+            window.hasShownVoiceAlert = true;
+          }
+        }
+      } catch (e) {
+        console.warn("TTS Fetch failed, falling back to browser voice", e);
+        statusDot.className = "status-dot error";
+        statusText.textContent = "Connection Error";
+      }
+
+      // Fallback to Browser Speech Synthesis
+      if (!statusText.textContent.includes("Fallback") && !statusText.textContent.includes("Error")) {
+        statusDot.className = "status-dot standard";
+        statusText.textContent = "Standard Voice";
+        statusContainer.title = "Fallback: Using Browser Text-to-Speech";
+      }
+
+      if (!window.speechSynthesis) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      const btn = document.getElementById("voiceToggle");
+      btn.textContent = voiceEnabled ? "🔊 Voice ON" : "🔇 Voice OFF";
+      btn.classList.toggle("disabled", !voiceEnabled);
+
+      // Stop audio if turning off
+      if (!voiceEnabled) {
+        if (currentAudio) currentAudio.pause();
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function showAlert(message) {
+      const alert = document.getElementById("alert");
+      alert.textContent = message;
+      alert.classList.add("show");
+      setTimeout(() => alert.classList.remove("show"), 5000);
+    }
+
+    async function calculateRoute() {
+      const origin = document.getElementById("origin").value;
+      const destination = document.getElementById("destination").value;
+
+      if (!origin || !destination) {
+        showAlert("⚠️ Please enter both origin and destination");
+        return;
+      }
+
+      const btn = document.getElementById("calculateBtn");
+      const overlay = document.getElementById("routeOverlay");
+      btn.disabled = true;
+      overlay.classList.add('show');
+
+      speak("Calculating optimal routes. Please wait.");
+
+      try {
+        const response = await fetch(`${API_URL}/alternative-routes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            origin,
+            destination,
+            traffic_condition: trafficCondition,
+            origin_lat: selectedOrigin ? selectedOrigin.lat : null,
+            origin_lng: selectedOrigin ? selectedOrigin.lon : null,
+            dest_lat: selectedDestination ? selectedDestination.lat : null,
+            dest_lng: selectedDestination ? selectedDestination.lon : null
+          }),
+        });
+
+        const data = await response.json();
+        alternativeRoutes = data.alternatives;
+
+        if (originMarker) map.removeLayer(originMarker);
+        if (destMarker) map.removeLayer(destMarker);
+
+        const firstRoute = alternativeRoutes[0];
+        const waypoints = firstRoute.waypoints.map(wp => [wp.lat, wp.lng]);
+
+        originMarker = L.marker(waypoints[0]).addTo(map).bindPopup(`<b>Origin:</b> ${origin}`).openPopup();
+        destMarker = L.marker(waypoints[waypoints.length - 1]).addTo(map).bindPopup(`<b>Destination:</b> ${destination}`);
+
+        displayWeatherWidget(data.origin_weather, data.destination_weather);
+        displayRouteCards(alternativeRoutes);
+
+        document.getElementById('alternativesPanel').classList.add('show');
+        document.getElementById("trafficStatus").style.display = "block";
+
+        // Initial draw - announce the best route (silent=false)
+        drawAllRoutes(0, false);
+
+        overlay.classList.remove('show');
+        // speak(`Routes calculated. Showing best options.`); // Removed redundant speak
+
+      } catch (error) {
+        console.error("Error:", error);
+        overlay.classList.remove('show');
+        showAlert("❌ Error calculating routes.");
+      }
+
+      btn.disabled = false;
+    }
+
+    function drawAllRoutes(selectedIndex, silent = false) {
+      if (allRouteLayers) {
+        allRouteLayers.forEach(layer => map.removeLayer(layer));
+      }
+      allRouteLayers = [];
+
+      alternativeRoutes.forEach((route, index) => {
+        const isSelected = index === selectedIndex;
+
+        let color;
+        if (isSelected) {
+          if (route.route_type === 'most_efficient') color = '#2e7d32';
+          else if (route.route_type === 'fastest') color = '#1976d2';
+          else color = '#f57c00';
+
+          // Announce selection
+          if (!silent) {
+            const summary = `Selected ${route.route_name}. Distance: ${route.metrics.distance_km} kilometers. Time: ${Math.round(route.metrics.estimated_time_min)} minutes.`;
+            speak(summary);
+          }
+          // Highlight card
+          const cards = document.querySelectorAll('.route-card');
+          cards.forEach((c, i) => {
+            if (i === index) c.classList.add('selected');
+            else c.classList.remove('selected');
+          });
+
+        } else {
+          color = '#9e9e9e';
+        }
+
+        const polyline = L.polyline(route.geometry, {
+          color: color,
+          weight: isSelected ? 8 : 5,
+          opacity: isSelected ? 1.0 : 0.4,
+          lineJoin: 'round'
+        }).addTo(map);
+
+        // Add click handler to polyline to select route
+        polyline.on('click', () => {
+          drawAllRoutes(index);
+        });
+
+        if (isSelected) {
+          polyline.bringToFront();
+          displayMetrics(route.metrics);
+        }
+
+        allRouteLayers.push(polyline);
+      });
+
+      if (allRouteLayers.length > 0) {
+        const group = new L.featureGroup(allRouteLayers);
+        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+      }
+    }
+
+    function selectRoute(index) {
+      document.querySelectorAll('.route-card').forEach((card, i) => {
+        card.classList.toggle('selected', i === index);
+      });
+      drawAllRoutes(index);
+      // speak handled by drawAllRoutes
+    }
+
+    function displayRouteCards(routes) {
+      const container = document.getElementById('routeCards');
+      container.innerHTML = '';
+
+      routes.forEach((route, index) => {
+        const card = document.createElement('div');
+        card.className = 'route-card';
+        if (index === 0) card.classList.add('selected');
+
+        card.innerHTML = `
+          <div class="route-card-header">
+            <div class="route-card-title">${route.route_name}</div>
+            <span class="route-badge ${route.route_type}">${route.route_type.toUpperCase()}</span>
+          </div>
+          <div class="route-stats">
+            <div class="route-stat">
+              <div class="route-stat-value">${route.metrics.distance_km}</div>
+              <div class="route-stat-label">km</div>
+            </div>
+            <div class="route-stat">
+              <div class="route-stat-value">${Math.round(route.metrics.estimated_time_min)}</div>
+              <div class="route-stat-label">min</div>
+            </div>
+            <div class="route-stat">
+              <div class="route-stat-value">${route.metrics.fuel_liters}</div>
+              <div class="route-stat-label">L</div>
+            </div>
+          </div>
+          <div class="route-conditions">
+            <div>🚦 ${route.traffic_summary}</div>
+            <div>🌤️ ${route.weather_summary || 'N/A'}</div>
+          </div>
+          <div style="margin-top: 10px; color: #666; font-size: 0.9em;">
+            ⛽ ₹${route.metrics.cost_usd} • 🌿 ${route.metrics.co2_kg.toFixed(3)} kg CO₂
+          </div>
+        `;
+
+        card.onclick = () => selectRoute(index);
+        container.appendChild(card);
+      });
+    }
+
+    function displayMetrics(metrics) {
+      const metricsGrid = document.getElementById("metricsGrid");
+      metricsGrid.style.display = "grid";
+      metricsGrid.innerHTML = `
+                <div class="metric-card">
+                    <h3>⛽ Fuel</h3>
+                    <div class="value">${metrics.fuel_liters}</div>
+                    <div class="unit">liters (₹${metrics.cost_usd})</div>
+                </div>
+                <div class="metric-card">
+                    <h3>🌿 CO₂ Emissions</h3>
+                    <div class="value">${metrics.co2_kg.toFixed(3)}</div>
+                    <div class="unit">kg</div>
+                </div>
+                <div class="metric-card">
+                    <h3>📏 Distance</h3>
+                    <div class="value">${metrics.distance_km}</div>
+                    <div class="unit">km</div>
+                </div>
+                <div class="metric-card">
+                    <h3>⛰️ Elevation</h3>
+                    <div class="value">${metrics.elevation_gain_m}</div>
+                    <div class="unit">meters</div>
+                </div>
+            `;
+    }
+
+    function displayWeatherWidget(origin, destination) {
+      if (!origin || !destination) return;
+      const widget = document.getElementById('weatherWidget');
+      widget.style.display = 'block';
+      const icons = { 'Clear': '☀️', 'Clouds': '☁️', 'Rain': '🌧️', 'Snow': '❄️' };
+      widget.innerHTML = `
+        <h3 style="margin-bottom: 10px; color: #333;">🌤️ Weather Conditions</h3>
+        <div class="weather-grid">
+          <div class="weather-item">
+            <div class="weather-icon">${icons[origin.condition] || '☁️'}</div>
+            <div>
+              <div style="font-weight: 600;">Origin</div>
+              <div>${origin.temperature.toFixed(1)}°C, ${origin.condition}</div>
+            </div>
+          </div>
+          <div class="weather-item">
+            <div class="weather-icon">${icons[destination.condition] || '☁️'}</div>
+            <div>
+              <div style="font-weight: 600;">Destination</div>
+              <div>${destination.temperature.toFixed(1)}°C, ${destination.condition}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function startTrafficSimulation() {
+      setInterval(async () => {
+        if (!alternativeRoutes.length) return;
+        const conditions = ["normal", "moderate", "heavy"];
+        const newCondition = conditions[Math.floor(Math.random() * conditions.length)];
+        if (newCondition === "heavy") {
+          showAlert("🚦 Heavy traffic detected on current route.");
+        }
+      }, 30000);
+    }
+  </script>
+</body>
+
+</html>
