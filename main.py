@@ -476,19 +476,15 @@ async def text_to_speech(request: TTSRequest):
         voice = "en-US-AriaNeural" 
         communicate = edge_tts.Communicate(request.text, voice)
         
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            tmp_path = tmp_file.name
-        
-        try:
+        # Use TemporaryDirectory for automatic cleanup
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "speech.mp3")
             await communicate.save(tmp_path)
             
             with open(tmp_path, "rb") as f:
                 audio_data = f.read()
                 
             return Response(content=audio_data, media_type="audio/mpeg")
-        finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
 
     except Exception as e:
         print(f"TTS Error: {e}")
