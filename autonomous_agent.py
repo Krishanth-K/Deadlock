@@ -2,6 +2,7 @@ import time
 import random
 import sys
 import math
+import asyncio
 from datetime import datetime
 from core import RouteFinder, WeatherService, ElevationService, TrafficService, CostModel, TrafficCondition, WeatherData, RouteMetrics
 
@@ -55,17 +56,17 @@ def generate_explanation(selected_route, alternatives):
     ]
     return explanation
 
-def autonomous_loop():
+async def autonomous_loop():
     print_box("ECO-ROUTE AUTONOMOUS AGENT", ["Initializing system...", "Target: Autonomous Dynamic Route Optimization"])
     
     # 1. Route Generation
     print(">> [Step 1] Fetching candidate routes...")
     try:
-        routes_data = RouteFinder.get_routes(ORIGIN[0], ORIGIN[1], DESTINATION[0], DESTINATION[1])
+        routes_data = await RouteFinder.get_routes(ORIGIN[0], ORIGIN[1], DESTINATION[0], DESTINATION[1])
     except Exception as e:
         print(f"CRITICAL ERROR: Route fetching failed. Retrying... {e}")
         time.sleep(2)
-        routes_data = RouteFinder.get_routes(ORIGIN[0], ORIGIN[1], DESTINATION[0], DESTINATION[1]) # Retry once
+        routes_data = await RouteFinder.get_routes(ORIGIN[0], ORIGIN[1], DESTINATION[0], DESTINATION[1]) # Retry once
 
     if not routes_data:
         print("FATAL: No routes found. Aborting.")
@@ -78,7 +79,7 @@ def autonomous_loop():
     
     # Global environment state (simulated dynamic changes)
     print(">> [Step 2] Acquiring environmental data...")
-    current_weather = WeatherService.get_weather(ORIGIN[0], ORIGIN[1])
+    current_weather = await WeatherService.get_weather(ORIGIN[0], ORIGIN[1])
     print(f"   Weather: {current_weather.condition}, {current_weather.temperature}°C (Source: {'Fallback' if current_weather.is_fallback else 'Live API'})")
 
     print(">> [Step 3] Enriching routes with elevation and traffic data...")
@@ -91,7 +92,7 @@ def autonomous_loop():
         duration = r_data.get("duration", 0) / 60.0
         
         # Elevation Stats
-        ascent, descent = ElevationService.get_route_elevation_stats(geometry)
+        ascent, descent = await ElevationService.get_route_elevation_stats(geometry)
         
         # Traffic
         # Use midpoint for traffic check location approx
@@ -201,4 +202,4 @@ def autonomous_loop():
     ])
 
 if __name__ == "__main__":
-    autonomous_loop()
+    asyncio.run(autonomous_loop())
