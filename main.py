@@ -460,6 +460,12 @@ async def recalculate_route(request: RouteRequest):
 
 class TTSRequest(BaseModel):
     text: str
+    
+    @validator('text')
+    def validate_text_length(cls, v):
+        if len(v) > 500:
+            raise ValueError('Text length must be under 500 characters')
+        return v
 
 @app.post("/tts")
 async def text_to_speech(request: TTSRequest):
@@ -472,15 +478,17 @@ async def text_to_speech(request: TTSRequest):
         
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
             tmp_path = tmp_file.name
-            
-        await communicate.save(tmp_path)
         
-        with open(tmp_path, "rb") as f:
-            audio_data = f.read()
+        try:
+            await communicate.save(tmp_path)
             
-        os.unlink(tmp_path)
-            
-        return Response(content=audio_data, media_type="audio/mpeg")
+            with open(tmp_path, "rb") as f:
+                audio_data = f.read()
+                
+            return Response(content=audio_data, media_type="audio/mpeg")
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     except Exception as e:
         print(f"TTS Error: {e}")
