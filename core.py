@@ -147,9 +147,9 @@ class ElevationService:
         if not geometry_coords or len(geometry_coords) < 2:
             return 0.0, 0.0
 
-        # Decimate to avoid too many requests (max 5 samples for this demo)
+        # Decimate to avoid too many requests (increased for accuracy)
         # In prod, we'd batch-request hundreds of points.
-        step = max(1, len(geometry_coords) // 5)
+        step = max(1, len(geometry_coords) // 40)
         samples = geometry_coords[::step]
         if samples[-1] != geometry_coords[-1]:
             samples.append(geometry_coords[-1])
