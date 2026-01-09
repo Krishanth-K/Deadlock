@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Tuple
 import random
 from enum import Enum
@@ -54,6 +54,18 @@ class RouteRequest(BaseModel):
     dest_lng: Optional[float] = None
     traffic_condition: Optional[str] = "normal" # Allow string for flexibility
     fuel_efficiency: Optional[float] = 8.0 # L/100km (Default: Sedan)
+
+    @validator('origin_lat', 'dest_lat')
+    def validate_lat(cls, v):
+        if v is not None and not (-90 <= v <= 90):
+            raise ValueError('Latitude must be between -90 and 90')
+        return v
+
+    @validator('origin_lng', 'dest_lng')
+    def validate_lng(cls, v):
+        if v is not None and not (-180 <= v <= 180):
+            raise ValueError('Longitude must be between -180 and 180')
+        return v
 
 class RouteMetrics(BaseModel):
     fuel_liters: float
